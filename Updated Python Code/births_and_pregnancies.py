@@ -514,7 +514,7 @@ def outputToExcel(outGdb, iso3, outXlsxDir):
 if __name__ == "__main__":
 
     # Input paths
-    countryListXml = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/Python Code/country_list.xml" # List of countries to process
+    countryListXml = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/country_list.xml" # List of countries to process
 
     urbanAsfrFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/asfr.gdb/asfrURBAN" # Urban ASFR data
     ruralAsfrFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/asfr.gdb/asfrRURAL" # Rural ASFR data
@@ -522,7 +522,7 @@ if __name__ == "__main__":
     urbanAreasShp = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/urban/af_as_lac_urban_EA.shp" # Urban area extents
     ageFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/popByAgeGroup.gdb/asia_africa" # Asia/Africa Sub-national breakdown of population by age
     ageXls = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/POPULATION_BY_AGE_FEMALE.xls" # UN national breakdown of female population by age
-    popRastDir = "C:/BirthsandPregnancies/WorldPop" # Population raster directory
+    popRastDir = "C:/BirthsandPregnancies/WorldPop/POP_Compressed" # Population raster directory
     grumpPopRast = "C:/BirthsandPregnancies/WorldPop/AfriPop_demo_2015_1km/ap15v4_TOTAL_adj.tif" # GRUMP population raster
     unBirthsXls = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/All-countries-births-by-year_ea.xls" # UN estimates of births
     birthPregMultiXlsx = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/Births-to-pregnancies-multipliers.xlsx" # Births to pregnancy multipliers
