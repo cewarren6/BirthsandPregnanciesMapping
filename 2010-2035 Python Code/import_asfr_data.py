@@ -3,9 +3,9 @@ import arcpy
 import xlrd
 import os
 
-asfrLookup = r"C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/asfr_lookup.csv"
-asfrDir = r"C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/ASFR"
-asfrGdb = r"C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/asfr.gdb"
+asfrLookup = r"C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/ASFR/asfr_lookup_2010.csv"
+asfrDir = r"C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/ASFR/2010"
+asfrGdb = r"C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/asfr_2010.gdb"
 
 # Loop through ASFR lookup asfr lookup table
 with open(asfrLookup) as csvFile:
