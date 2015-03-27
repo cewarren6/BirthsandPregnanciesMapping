@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 def findPopRast(popRastDir, iso3, grumpPopRast, countryBoundaries, outDir):
     # Look for tif files
     matches = []
-    for root, dirnames, filenames in os.walk(popRastDir + "/" + iso3):
+    for root, dirnames, filenames in os.walk(popRastDir + "\\" + iso3):
       for filename in fnmatch.filter(filenames, '*.tif'):
           matches.append(os.path.join(root, filename))
     # If match found return path
@@ -316,14 +316,14 @@ def urbanAndRuralPopAndWra(outDir, countryBoundaries, urbanAreasShp, iso3):
 if __name__ == "__main__":
 
     # Input paths
-    countryListXml = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/Python Code/country_list.xml" # List of countries to process
+    countryListXml = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/country_list.xml" # List of countries to process
 
-    popRastDir = "C:/BirthsandPregnancies/WorldPop/POP_Compressed" # Population raster directory
+    popRastDir = "C:\\BirthsandPregnancies\\WorldPop" # Population raster directory
     grumpPopRast = "C:/BirthsandPregnancies/WorldPop/AfriPop_demo_2015_1km/ap15v4_TOTAL_adj.tif" # GRUMP population raster
     countryBoundaries = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/LSIB-WSV/lsib-wsv.gdb/detailed_world_polygons" # Country boundary polygons
     urbanGrowthFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/Growth Rates/GrowthRates.gdb/Urban" # Urban growth rates
     ruralGrowthFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/Growth Rates/GrowthRates.gdb/Rural" # Rural growth rates
-    urbanAreasShp = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/urban/af_as_lac_urban_EA.shp" # Urban area extents
+    urbanAreasShp = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/GRUMP/af_as_lac_urban_Mano.shp" # Urban area extents
     unPopEstCsv = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/WPP2012_DB02_POPULATIONS_ANNUAL.CSV" # UN Population Estimates
     unPopBySexCsv = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/WPP2012_DB04_POPULATION_BY_SEX_ANNUAL.CSV" # UN Population estimates by age and sex
     ageFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/popByAgeGroup.gdb/asia_africa" # Asia/Africa Sub-national breakdown of population by age
