@@ -7,7 +7,7 @@ years = (2010, 2012, 2015, 2020, 2025, 2030, 2035)
 datasets = ("adjustedBirths", "pregnancies")
 
 rasterDir = "C:/BirthsandPregnancies/results/raster"
-countryListXml = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/Python Code/country_list.xml"
+countryListXml = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/country_list.xml"
 outputDir = "C:/BirthsandPregnancies/results/compressed_rasters"
 
 # Set up logging

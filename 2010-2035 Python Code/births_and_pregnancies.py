@@ -50,11 +50,11 @@ def dhsAsfrJoin(urbanAsfrFc, ruralAsfrFc, iso2, dhsRegionsFc, urbanAreasShp, iso
             arcpy.FeatureClassToFeatureClass_conversion("in_memory/dhsUrbanRural",
                                                         "in_memory",
                                                         "dhsUrban",
-                                                        """ GRIDCODE = 2 """)
+                                                        """ ONES = 1 """)
             arcpy.FeatureClassToFeatureClass_conversion("in_memory/dhsUrbanRural",
                                                         "in_memory",
                                                         "dhsRural",
-                                                        """ GRIDCODE = 1 """)
+                                                        """ ONES = 0 """)
 
             # Join DHS polygons to ASFR tables
             arcpy.JoinField_management("in_memory/dhsUrban", "REG_ID", "in_memory/urbanAsfrExtract", "REG_ID", ["a1520", "a2025", "a2530", "a3035", "a3540", "a4045", "a4550"])
@@ -287,11 +287,11 @@ def growthRatesJoin(urbanGrowthFc, ruralGrowthFc, countryBoundaries, urbanAreasS
         arcpy.FeatureClassToFeatureClass_conversion("in_memory/countryUrbanRural",
                                                     "in_memory",
                                                     "countryUrban",
-                                                    """ GRIDCODE = 1 """)
+                                                    """ ONES = 1 """)
         arcpy.FeatureClassToFeatureClass_conversion("in_memory/countryUrbanRural",
                                                     "in_memory",
                                                     "countryRural",
-                                                    """ GRIDCODE = 0 """)
+                                                    """ ONES = 0 """)
         # Join growth rates data
         arcpy.JoinField_management("in_memory/countryUrban", "iso_alpha2", urbanGrowthFc, "ISO2", ["Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"])
         arcpy.JoinField_management("in_memory/countryRural", "iso_alpha2", ruralGrowthFc, "ISO2", ["Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"])
@@ -429,12 +429,12 @@ def adminLevel2Estimates(adminBoundaryFc, iso3, urbanAreasShp, rastDir, outGdb):
         outputFc = os.path.join(outGdb, "birthsAndPregnancies%s" % iso3)
 
         # Aggregate polygons
-        arcpy.Dissolve_management("in_memory/adminUrbanRural", outputFc, ["ADM2_CODE", "ADM2_NAME", "GRIDCODE"])
+        arcpy.Dissolve_management("in_memory/adminUrbanRural", outputFc, ["ADM2_CODE", "ADM2_NAME", "ONES"])
         # Create new fields for zonal statistics
         arcpy.AddField_management(outputFc, "urbanOrRural", "TEXT")
         arcpy.AddField_management(outputFc, "ZONES", "TEXT")
 
-        with arcpy.da.UpdateCursor(outputFc, ["ADM2_CODE", "GRIDCODE", "urbanOrRural", "ZONES"]) as upCur:
+        with arcpy.da.UpdateCursor(outputFc, ["ADM2_CODE", "ONES", "urbanOrRural", "ZONES"]) as upCur:
             for row in upCur:
                 if row[1] == 1:
                     row[2] = "URBAN"
@@ -443,8 +443,8 @@ def adminLevel2Estimates(adminBoundaryFc, iso3, urbanAreasShp, rastDir, outGdb):
                 row[3] = str(row[0]) + str(row[2])
                 upCur.updateRow(row)
 
-        # Remove "GRIDCODE" field as no longer needed
-        arcpy.DeleteField_management(outputFc, "GRIDCODE")
+        # Remove "ONES" field as no longer needed
+        arcpy.DeleteField_management(outputFc, "ONES")
         
 
         # Calculate zonal statistics SUM for each raster
@@ -460,7 +460,7 @@ def adminLevel2Estimates(adminBoundaryFc, iso3, urbanAreasShp, rastDir, outGdb):
             # Join stats table to output feature class
             arcpy.JoinField_management(outputFc, "ZONES", "in_memory/%s%sSUM"  % (desc, year), "ZONES", ["%s%s" % (desc, year)])
 
-        # Remove "GRIDCODE" field as no longer needed
+        # Remove "ONES" field as no longer needed
         arcpy.DeleteField_management(outputFc, "ZONES")
 
     finally:
