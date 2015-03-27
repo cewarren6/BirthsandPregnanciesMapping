@@ -50,11 +50,11 @@ def dhsAsfrJoin(urbanAsfrFc, ruralAsfrFc, iso2, dhsRegionsFc, urbanAreasShp, iso
             arcpy.FeatureClassToFeatureClass_conversion("in_memory/dhsUrbanRural",
                                                         "in_memory",
                                                         "dhsUrban",
-                                                        """ ONES = 1 """)
+                                                        """ GRIDCODE = 2 """)
             arcpy.FeatureClassToFeatureClass_conversion("in_memory/dhsUrbanRural",
                                                         "in_memory",
                                                         "dhsRural",
-                                                        """ ONES = 0 """)
+                                                        """ GRIDCODE = 1 """)
 
             # Join DHS polygons to ASFR tables
             arcpy.JoinField_management("in_memory/dhsUrban", "REG_ID", "in_memory/urbanAsfrExtract", "REG_ID", ["a1520", "a2025", "a2530", "a3035", "a3540", "a4045", "a4550"])
@@ -72,7 +72,7 @@ def dhsAsfrJoin(urbanAsfrFc, ruralAsfrFc, iso2, dhsRegionsFc, urbanAreasShp, iso
 def findPopRast(popRastDir, iso3, grumpPopRast, countryBoundaries, outDir):
     # Look for tif files
     matches = []
-    for root, dirnames, filenames in os.walk(popRastDir + "/" + iso3):
+    for root, dirnames, filenames in os.walk(popRastDir + "\\" + iso3):
       for filename in fnmatch.filter(filenames, '*.tif'):
           matches.append(os.path.join(root, filename))
     # If match found return path
@@ -287,11 +287,11 @@ def growthRatesJoin(urbanGrowthFc, ruralGrowthFc, countryBoundaries, urbanAreasS
         arcpy.FeatureClassToFeatureClass_conversion("in_memory/countryUrbanRural",
                                                     "in_memory",
                                                     "countryUrban",
-                                                    """ ONES = 1 """)
+                                                    """ GRIDCODE = 1 """)
         arcpy.FeatureClassToFeatureClass_conversion("in_memory/countryUrbanRural",
                                                     "in_memory",
                                                     "countryRural",
-                                                    """ ONES = 0 """)
+                                                    """ GRIDCODE = 0 """)
         # Join growth rates data
         arcpy.JoinField_management("in_memory/countryUrban", "iso_alpha2", urbanGrowthFc, "ISO2", ["Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"])
         arcpy.JoinField_management("in_memory/countryRural", "iso_alpha2", ruralGrowthFc, "ISO2", ["Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"])
@@ -429,12 +429,12 @@ def adminLevel2Estimates(adminBoundaryFc, iso3, urbanAreasShp, rastDir, outGdb):
         outputFc = os.path.join(outGdb, "birthsAndPregnancies%s" % iso3)
 
         # Aggregate polygons
-        arcpy.Dissolve_management("in_memory/adminUrbanRural", outputFc, ["ADM2_CODE", "ADM2_NAME", "ONES"])
+        arcpy.Dissolve_management("in_memory/adminUrbanRural", outputFc, ["ADM2_CODE", "ADM2_NAME", "GRIDCODE"])
         # Create new fields for zonal statistics
         arcpy.AddField_management(outputFc, "urbanOrRural", "TEXT")
         arcpy.AddField_management(outputFc, "ZONES", "TEXT")
 
-        with arcpy.da.UpdateCursor(outputFc, ["ADM2_CODE", "ONES", "urbanOrRural", "ZONES"]) as upCur:
+        with arcpy.da.UpdateCursor(outputFc, ["ADM2_CODE", "GRIDCODE", "urbanOrRural", "ZONES"]) as upCur:
             for row in upCur:
                 if row[1] == 1:
                     row[2] = "URBAN"
@@ -443,8 +443,8 @@ def adminLevel2Estimates(adminBoundaryFc, iso3, urbanAreasShp, rastDir, outGdb):
                 row[3] = str(row[0]) + str(row[2])
                 upCur.updateRow(row)
 
-        # Remove "ONES" field as no longer needed
-        arcpy.DeleteField_management(outputFc, "ONES")
+        # Remove "GRIDCODE" field as no longer needed
+        arcpy.DeleteField_management(outputFc, "GRIDCODE")
         
 
         # Calculate zonal statistics SUM for each raster
@@ -460,7 +460,7 @@ def adminLevel2Estimates(adminBoundaryFc, iso3, urbanAreasShp, rastDir, outGdb):
             # Join stats table to output feature class
             arcpy.JoinField_management(outputFc, "ZONES", "in_memory/%s%sSUM"  % (desc, year), "ZONES", ["%s%s" % (desc, year)])
 
-        # Remove "ONES" field as no longer needed
+        # Remove "GRIDCODE" field as no longer needed
         arcpy.DeleteField_management(outputFc, "ZONES")
 
     finally:
@@ -516,20 +516,20 @@ if __name__ == "__main__":
     # Input paths
     countryListXml = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/country_list.xml" # List of countries to process
 
-    urbanAsfrFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/asfr.gdb/asfrURBAN" # Urban ASFR data
-    ruralAsfrFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/asfr.gdb/asfrRURAL" # Rural ASFR data
+    urbanAsfrFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/asfr_2010.gdb/asfrURBAN" # Urban ASFR data
+    ruralAsfrFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/asfr_2010.gdb/asfrRURAL" # Rural ASFR data
     dhsRegionsFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/dhsBoundaries.gdb/subnational_boundaries" # DHS boundaries   
-    urbanAreasShp = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/urban/af_as_lac_urban_EA.shp" # Urban area extents
+    urbanAreasShp = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/GRUMP/af_as_lac_urban_Mano.shp" # Urban area extents
     ageFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/popByAgeGroup.gdb/asia_africa" # Asia/Africa Sub-national breakdown of population by age
     ageXls = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/POPULATION_BY_AGE_FEMALE.xls" # UN national breakdown of female population by age
-    popRastDir = "C:/BirthsandPregnancies/WorldPop/POP_Compressed" # Population raster directory
+    popRastDir = "C:\\BirthsandPregnancies\\WorldPop" # Population raster directory
     grumpPopRast = "C:/BirthsandPregnancies/WorldPop/AfriPop_demo_2015_1km/ap15v4_TOTAL_adj.tif" # GRUMP population raster
-    unBirthsXls = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/All-countries-births-by-year_ea.xls" # UN estimates of births
+    unBirthsXls = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/All-countries-births-by-year_Mano.xls" # UN estimates of births
     birthPregMultiXlsx = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/Births-to-pregnancies-multipliers.xlsx" # Births to pregnancy multipliers
     countryBoundaries = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/LSIB-WSV/lsib-wsv.gdb/detailed_world_polygons" # Country boundary polygons
     urbanGrowthFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/Growth Rates/GrowthRates.gdb/Urban" # Urban growth rates
     ruralGrowthFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/Growth Rates/GrowthRates.gdb/Rural" # Rural growth rates
-    adminBoundaryFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/adminBoundaries/adminBoundaries.gdb/g2014_2010_2_EA" # Admin level 2 boundaries
+    adminBoundaryFc = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/adminBoundaries/adminBoundaries.gdb/g2014_2010_2_Mano" # Admin level 2 boundaries
     growthRatesXls = "C:/Users/cr2m14/Google Drive/BirthsandPregnanciesMapping/WPP2012_POP_F02_POPULATION_GROWTH_RATE.XLS" # UN National Growth Rates
     
 # Output paths
