@@ -8,7 +8,7 @@ datasets = ("adjustedBirths", "pregnancies")
 
 rasterDir = "C:/BirthsandPregnancies/results/raster"
 countryListXml = "C:/Google Drive/BirthsandPregnanciesMapping/country_list.xml"
-outputDir = "C:/BirthsandPregnancies/results/compressed_rasters"
+outputDir = "C:/BirthsandPregnancies/results/compressed_rasters/1990"
 
 # Set up logging
 logging.basicConfig(format="%(asctime)s|%(levelname)s|%(message)s", level=logging.INFO)
@@ -26,7 +26,6 @@ for country in countryList.findall("country"):
 
         tgz = tarfile.open(os.path.join(outputDir, "%s-%s.tar.gz" % (iso3, dataset)), "w:gz")
 
-        #for year in years:
 
         tiff = os.path.join(rasterDir, "%s%s%s.tif" % (iso3, year, dataset))
         tfw = os.path.join(rasterDir, "%s%s%s.tfw" % (iso3, year, dataset))

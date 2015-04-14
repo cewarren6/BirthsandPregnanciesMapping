@@ -62,7 +62,7 @@ def dhsAsfrJoin(urbanAsfrFc, ruralAsfrFc, iso2, dhsRegionsFc, urbanAreasShp, iso
             
             # Merge rural and urban polygons
             arcpy.Merge_management(["in_memory/dhsUrban", "in_memory/dhsRural"], 
-                                   r"C:\Users\cr2m14\Google Drive\BirthsandPregnanciesMapping\results\test\result.gdb\dhsAsfr%s" % iso3) 
+                                   r"C:\Google Drive\BirthsandPregnanciesMapping\results\test\result.gdb\dhsAsfr%s" % iso3) 
                                    #outGDB + "/dhsAsfr%s" % iso3)
 
     finally:
@@ -102,8 +102,8 @@ def findPopRast(popRastDir, iso3, grumpPopRast, countryBoundaries, outDir):
             arcpy.env.cellSize = newCellSize
             grumpPop100m = grumpPopClip / float(100)
 
-            arcpy.CopyRaster_management(grumpPop100m, os.path.join(outDir, "pop2010%s.tif" % iso3))
-            return os.path.join(outDir, "pop2010%s.tif" % iso3)
+            arcpy.CopyRaster_management(grumpPop100m, os.path.join(outDir, "pop1990%s.tif" % iso3))
+            return os.path.join(outDir, "pop1990%s.tif" % iso3)
         finally:
             arcpy.env.cellSize = defaultCellSize
             arcpy.Delete_management("in_memory")
@@ -156,7 +156,7 @@ def unajustedBirthsEstimates(ageFc, iso3, ageXls, isoNum, popRastPath, asfrPrese
 
             # Get female populations by age from spreadsheet, calculate ratios
             wb = xlrd.open_workbook(ageXls)
-            ws = wb.sheet_by_name("2010")
+            ws = wb.sheet_by_name("1990")
             for row in range(1, ws.nrows):
                 if int(ws.cell_value(row, 4)) == int(isoNum):
                     ageRatioFemale = { k : ((v * 1000) / totalPop)  for k, v in zip(("a1520", "a2025", "a2530", "a3035", "a3540", "a4045", "a4550"), ws.row_values(row, 6, 13)) }
@@ -193,9 +193,9 @@ def unajustedBirthsEstimates(ageFc, iso3, ageXls, isoNum, popRastPath, asfrPrese
                     totalWocba = row[0]
             # Retrieve UN total births from spreadsheet
             wb = xlrd.open_workbook(unBirthsXls)
-            ws = wb.sheet_by_name("MEDIUM")
+            ws = wb.sheet_by_name("ESTIMATES")
             for row in range(1, ws.nrows):
-                if ws.cell_value(row, 4) == iso3 and int(ws.cell_value(row, 2)) == 2010:
+                if ws.cell_value(row, 4) == iso3 and int(ws.cell_value(row, 2)) == 1990:
                     unTotal = ws.cell_value(row, 3) * 1000
             # Calculate fertility rate
             fertilityRate = float(unTotal) / float(totalWocba)
@@ -218,7 +218,7 @@ def unajustedBirthsEstimates(ageFc, iso3, ageXls, isoNum, popRastPath, asfrPrese
                 birthsRasters.append(wocbaRasters[ageField] * fertilityRate)
 
         births = arcpy.sa.CellStatistics(birthsRasters, "SUM", "DATA")
-        arcpy.CopyRaster_management(births, os.path.join(outputDir, "%s2010unadjustedBirths.tif" % iso3), pixel_type="32_BIT_FLOAT")
+        arcpy.CopyRaster_management(births, os.path.join(outputDir, "%s1990unadjustedBirths.tif" % iso3), pixel_type="32_BIT_FLOAT")
 
     finally:
         # Tidy up
@@ -252,7 +252,7 @@ def adjustedBirthsEstimates(unBirthsXls, iso3, year, outputDir):
 
         # Retrieve UN total from spreadsheet
         wb = xlrd.open_workbook(unBirthsXls)
-        ws = wb.sheet_by_name("MEDIUM")
+        ws = wb.sheet_by_name("ESTIMATES")
         for row in range(1, ws.nrows):
             if ws.cell_value(row, 4) == iso3 and int(ws.cell_value(row, 2)) == year:
                 unTotal = ws.cell_value(row, 3) * 1000
@@ -268,119 +268,119 @@ def adjustedBirthsEstimates(unBirthsXls, iso3, year, outputDir):
         arcpy.env.workspace = old_workspace
         arcpy.env.scratchWorkspace = old_scratchWorkspace
 
-def growthRatesJoin(urbanGrowthFc, ruralGrowthFc, countryBoundaries, urbanAreasShp, iso3, outputGdb):
+# def growthRatesJoin(urbanGrowthFc, ruralGrowthFc, countryBoundaries, urbanAreasShp, iso3, outputGdb):
 
-    try:
-        # Extract polygons by country iso
-        arcpy.FeatureClassToFeatureClass_conversion(countryBoundaries,
-                                                    "in_memory",
-                                                    "countryBoundary",
-                                                    """ iso_alpha3 = '%s' """ % (iso3,))
-        arcpy.FeatureClassToFeatureClass_conversion(urbanAreasShp,
-                                                    "in_memory",
-                                                    "urban_extract",
-                                                    """ ISO3 = '%s' """ % (iso3,))
-        # Union of urban and boundary polygons
-        arcpy.Union_analysis(["in_memory/countryBoundary", "in_memory/urban_extract"],
-                             "in_memory/countryUrbanRural")
-        # Separate urban and rural polygons
-        arcpy.FeatureClassToFeatureClass_conversion("in_memory/countryUrbanRural",
-                                                    "in_memory",
-                                                    "countryUrban",
-                                                    """ ONES = 1 """)
-        arcpy.FeatureClassToFeatureClass_conversion("in_memory/countryUrbanRural",
-                                                    "in_memory",
-                                                    "countryRural",
-                                                    """ ONES = 0 """)
-        # Join growth rates data
-        arcpy.JoinField_management("in_memory/countryUrban", "iso_alpha2", urbanGrowthFc, "ISO2", ["Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"])
-        arcpy.JoinField_management("in_memory/countryRural", "iso_alpha2", ruralGrowthFc, "ISO2", ["Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"])
-        # Merge urban and rural data back together
-        arcpy.Merge_management(["in_memory/countryUrban", "in_memory/countryRural"], outputGdb + "/growthRates%s" % iso3)
+#     try:
+#         # Extract polygons by country iso
+#         arcpy.FeatureClassToFeatureClass_conversion(countryBoundaries,
+#                                                     "in_memory",
+#                                                     "countryBoundary",
+#                                                     """ iso_alpha3 = '%s' """ % (iso3,))
+#         arcpy.FeatureClassToFeatureClass_conversion(urbanAreasShp,
+#                                                     "in_memory",
+#                                                     "urban_extract",
+#                                                     """ ISO3 = '%s' """ % (iso3,))
+#         # Union of urban and boundary polygons
+#         arcpy.Union_analysis(["in_memory/countryBoundary", "in_memory/urban_extract"],
+#                              "in_memory/countryUrbanRural")
+#         # Separate urban and rural polygons
+#         arcpy.FeatureClassToFeatureClass_conversion("in_memory/countryUrbanRural",
+#                                                     "in_memory",
+#                                                     "countryUrban",
+#                                                     """ ONES = 1 """)
+#         arcpy.FeatureClassToFeatureClass_conversion("in_memory/countryUrbanRural",
+#                                                     "in_memory",
+#                                                     "countryRural",
+#                                                     """ ONES = 0 """)
+#         # Join growth rates data
+#         arcpy.JoinField_management("in_memory/countryUrban", "iso_alpha2", urbanGrowthFc, "ISO2", ["Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"])
+#         arcpy.JoinField_management("in_memory/countryRural", "iso_alpha2", ruralGrowthFc, "ISO2", ["Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"])
+#         # Merge urban and rural data back together
+#         arcpy.Merge_management(["in_memory/countryUrban", "in_memory/countryRural"], outputGdb + "/growthRates%s" % iso3)
 
-    finally:
-        # Tidy up
-        arcpy.Delete_management("in_memory")
+#     finally:
+#         # Tidy up
+#         arcpy.Delete_management("in_memory")
 
 
-def futureBirthsEstimates(growthRatesXls, iso3, isoNum, outputGDB, outputDir):
+# def futureBirthsEstimates(growthRatesXls, iso3, isoNum, outputGDB, outputDir):
 
-    arcpy.CheckOutExtension("Spatial")
+#     arcpy.CheckOutExtension("Spatial")
 
-    old_workspace = arcpy.env.workspace
-    old_scratchWorkspace = arcpy.env.scratchWorkspace
+#     old_workspace = arcpy.env.workspace
+#     old_scratchWorkspace = arcpy.env.scratchWorkspace
     
-    tmpdir = tempfile.mkdtemp()
-    arcpy.env.workspace = tmpdir
-    arcpy.env.scratchWorkspace = tmpdir
+#     tmpdir = tempfile.mkdtemp()
+#     arcpy.env.workspace = tmpdir
+#     arcpy.env.scratchWorkspace = tmpdir
 
-    try:
-        # Estimate births for 2015, 2020, 2025, and 2030
-        for growthField in ("Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"):
+#     try:
+#         # Estimate births for 2015, 2020, 2025, and 2030
+#         for growthField in ("Growth20102015", "Growth20152020", "Growth20202025", "Growth20252030"):
 
-            fromYear = growthField[-8:-4] # Year growth is calculated from
-            toYear = growthField[-4:] # Year growth is calculated to
+#             fromYear = growthField[-8:-4] # Year growth is calculated from
+#             toYear = growthField[-4:] # Year growth is calculated to
 
-            # Retrieve adjusted births raster and raster cell size
-            adjustedBirthsRast = arcpy.Raster(os.path.join(outputDir, "%s%sadjustedBirths.tif" % (iso3, fromYear)))
-            cellSize = (adjustedBirthsRast.meanCellHeight + adjustedBirthsRast.meanCellWidth) / float(2)
+#             # Retrieve adjusted births raster and raster cell size
+#             adjustedBirthsRast = arcpy.Raster(os.path.join(outputDir, "%s%sadjustedBirths.tif" % (iso3, fromYear)))
+#             cellSize = (adjustedBirthsRast.meanCellHeight + adjustedBirthsRast.meanCellWidth) / float(2)
 
-            # Create raster of growth rates from feature class
-            growthRast = "%s.tif" % growthField
-            arcpy.PolygonToRaster_conversion(outputGDB + "/growthRates%s" % iso3,
-                                             growthField,
-                                             growthRast,
-                                             cell_assignment="MAXIMUM_AREA",
-                                             cellsize=cellSize)
+#             # Create raster of growth rates from feature class
+#             growthRast = "%s.tif" % growthField
+#             arcpy.PolygonToRaster_conversion(outputGDB + "/growthRates%s" % iso3,
+#                                              growthField,
+#                                              growthRast,
+#                                              cell_assignment="MAXIMUM_AREA",
+#                                              cellsize=cellSize)
 
-            # Calculate unadjusted births and create output raster
-            unadjustedBirths = adjustedBirthsRast * arcpy.sa.Exp(arcpy.Raster(growthRast) / 100 * 5)
-            arcpy.CopyRaster_management(unadjustedBirths, os.path.join(outputDir, "%s%sunadjustedBirths.tif" % (iso3, toYear)), pixel_type="32_BIT_FLOAT")
+#             # Calculate unadjusted births and create output raster
+#             unadjustedBirths = adjustedBirthsRast * arcpy.sa.Exp(arcpy.Raster(growthRast) / 100 * 5)
+#             arcpy.CopyRaster_management(unadjustedBirths, os.path.join(outputDir, "%s%sunadjustedBirths.tif" % (iso3, toYear)), pixel_type="32_BIT_FLOAT")
 
-            # Calculate adjusted births
-            adjustedBirthsEstimates(unBirthsXls, iso3, int(toYear), outputDir)
-
-
-        # Estimate births for 2012
-
-        # Retrieve 2010 adjusted births raster
-        adjustedBirthsRast = arcpy.Raster(os.path.join(outputDir, "%s2010adjustedBirths.tif" % iso3))
-
-        # Calculate unadjusted births and create output raster
-        growthRast = "Growth20102015.tif"
-        unadjustedBirths = adjustedBirthsRast * arcpy.sa.Exp(arcpy.Raster(growthRast) / 100 * 2)
-        arcpy.CopyRaster_management(unadjustedBirths, os.path.join(outputDir, "%s2012unadjustedBirths.tif" % iso3), pixel_type="32_BIT_FLOAT")
-
-        # Calculate adjusted births
-        adjustedBirthsEstimates(unBirthsXls, iso3, 2012, outputDir)
+#             # Calculate adjusted births
+#             adjustedBirthsEstimates(unBirthsXls, iso3, int(toYear), outputDir)
 
 
-        # 2035 estimates are calculated separately, as only national growth rates are available
+#         # Estimate births for 2012
 
-        # Retrieve adjusted births raster
-        adjustedBirthsRast = arcpy.Raster(os.path.join(outputDir, "%s2030adjustedBirths.tif" % iso3))
+#         # Retrieve 2010 adjusted births raster
+#         adjustedBirthsRast = arcpy.Raster(os.path.join(outputDir, "%s2010adjustedBirths.tif" % iso3))
 
-        # Retrieve growth rate from spreadsheet
-        wb = xlrd.open_workbook(growthRatesXls)
-        ws = wb.sheet_by_name("MEDIUM FERTILITY")
-        for row in range(17, ws.nrows):
-            if int(ws.cell_value(row, 4)) == int(isoNum):
-                growthRate = ws.cell_value(row, 9)
+#         # Calculate unadjusted births and create output raster
+#         growthRast = "Growth20102015.tif"
+#         unadjustedBirths = adjustedBirthsRast * arcpy.sa.Exp(arcpy.Raster(growthRast) / 100 * 2)
+#         arcpy.CopyRaster_management(unadjustedBirths, os.path.join(outputDir, "%s2012unadjustedBirths.tif" % iso3), pixel_type="32_BIT_FLOAT")
 
-        # Calculate unadjusted births and create output raster
-        unadjustedBirths = adjustedBirthsRast * math.exp(growthRate / 100 * 5)
-        arcpy.CopyRaster_management(unadjustedBirths, os.path.join(outputDir, "%s2035unadjustedBirths.tif" % iso3), pixel_type="32_BIT_FLOAT")
-
-        # Calculate adjusted births
-        adjustedBirthsEstimates(unBirthsXls, iso3, 2035, outputDir)
+#         # Calculate adjusted births
+#         adjustedBirthsEstimates(unBirthsXls, iso3, 2012, outputDir)
 
 
-    finally:
-        # Tidy up
-        arcpy.CheckInExtension("Spatial")
-        arcpy.Delete_management(tmpdir)
-        arcpy.env.workspace = old_workspace
-        arcpy.env.scratchWorkspace = old_scratchWorkspace
+#         # 2035 estimates are calculated separately, as only national growth rates are available
+
+#         # Retrieve adjusted births raster
+#         adjustedBirthsRast = arcpy.Raster(os.path.join(outputDir, "%s2030adjustedBirths.tif" % iso3))
+
+#         # Retrieve growth rate from spreadsheet
+#         wb = xlrd.open_workbook(growthRatesXls)
+#         ws = wb.sheet_by_name("MEDIUM FERTILITY")
+#         for row in range(17, ws.nrows):
+#             if int(ws.cell_value(row, 4)) == int(isoNum):
+#                 growthRate = ws.cell_value(row, 9)
+
+#         # Calculate unadjusted births and create output raster
+#         unadjustedBirths = adjustedBirthsRast * math.exp(growthRate / 100 * 5)
+#         arcpy.CopyRaster_management(unadjustedBirths, os.path.join(outputDir, "%s2035unadjustedBirths.tif" % iso3), pixel_type="32_BIT_FLOAT")
+
+#         # Calculate adjusted births
+#         adjustedBirthsEstimates(unBirthsXls, iso3, 2035, outputDir)
+
+
+#     finally:
+#         # Tidy up
+#         arcpy.CheckInExtension("Spatial")
+#         arcpy.Delete_management(tmpdir)
+#         arcpy.env.workspace = old_workspace
+#         arcpy.env.scratchWorkspace = old_scratchWorkspace
 
 def pregnanciesEstimates(birthPregMultiXlsx, iso3, outputDir):
 
@@ -395,14 +395,15 @@ def pregnanciesEstimates(birthPregMultiXlsx, iso3, outputDir):
                 birthPregMulti = ws.cell_value(row, 1)
 
         # Multiply births estimates for each year by multiplier
-        for year in ("2010", "2012", "2015", "2020", "2025", "2030", "2035"):
-            rastPath = os.path.join(outputDir, "%s%sadjustedBirths.tif" % (iso3, year))
-            birthsRast = arcpy.Raster(rastPath)
+        year = 1990
+        #for year in ("1990"):
+        rastPath = os.path.join(outputDir, "%s%sadjustedBirths.tif" % (iso3, year))
+        birthsRast = arcpy.Raster(rastPath)
 
-            pregnancies = birthsRast * birthPregMulti
+        pregnancies = birthsRast * birthPregMulti
 
-            outRast = os.path.join(outputDir, "%s%spregnancies.tif" % (iso3, year))
-            arcpy.CopyRaster_management(pregnancies, outRast, pixel_type="32_BIT_FLOAT")
+        outRast = os.path.join(outputDir, "%s%spregnancies.tif" % (iso3, year))
+        arcpy.CopyRaster_management(pregnancies, outRast, pixel_type="32_BIT_FLOAT")
 
     finally:
         arcpy.CheckInExtension("Spatial")
@@ -446,9 +447,10 @@ def adminLevel2Estimates(adminBoundaryFc, iso3, urbanAreasShp, rastDir, outGdb):
         # Remove "ONES" field as no longer needed
         arcpy.DeleteField_management(outputFc, "ONES")
         
-
+        year = "1990"
         # Calculate zonal statistics SUM for each raster
-        for year, desc in itertools.product(("2010", "2012", "2015", "2020", "2025", "2030", "2035"), ("adjustedBirths", "pregnancies")):
+        #for year, desc in itertools.product(("1990"), ("adjustedBirths", "pregnancies")):
+        for desc in ("adjustedBirths", "pregnancies"):
 
             raster = os.path.join(rastDir, "%s%s%s.tif" % (iso3, year, desc))
             arcpy.sa.ZonalStatisticsAsTable(outputFc, "ZONES", raster, "in_memory/%s%sSUM"  % (desc, year), "DATA", "SUM")
@@ -469,18 +471,19 @@ def adminLevel2Estimates(adminBoundaryFc, iso3, urbanAreasShp, rastDir, outGdb):
 
 def outputToExcel(outGdb, iso3, outXlsxDir):
 
+    year = "1990"
     # Input feature class
     outputFc = os.path.join(outGdb, "birthsAndPregnancies%s" % iso3)
     # Fieldnames
-    fields = ("ADM2_CODE", "ADM2_NAME", "urbanOrRural", "adjustedBirths2010",
-              "pregnancies2010", "adjustedBirths2012", "pregnancies2012",
-              "adjustedBirths2015", "pregnancies2015", "adjustedBirths2020",
-              "pregnancies2020", "adjustedBirths2025", "pregnancies2025",
-              "adjustedBirths2030", "pregnancies2030", "adjustedBirths2035",
-              "pregnancies2035")
+    fields = ("ADM2_CODE", "ADM2_NAME", "urbanOrRural", "adjustedBirths1990", "pregnancies1990")
+              # "pregnancies2010", "adjustedBirths2012", "pregnancies2012",
+              # "adjustedBirths2015", "pregnancies2015", "adjustedBirths2020",
+              # "pregnancies2020", "adjustedBirths2025", "pregnancies2025",
+              # "adjustedBirths2030", "pregnancies2030", "adjustedBirths2035",
+              # "pregnancies2035")
 
     # Create output spreadsheet
-    outXlsx = os.path.join(outXlsxDir, "birthsAndPregnancies%s.xlsx" % iso3)
+    outXlsx = os.path.join(outXlsxDir, "birthsAndPregnancies%s%s.xlsx" % (iso3, year))
 
     wb = xlsxwriter.Workbook(outXlsx)
     ws = wb.add_worksheet()
@@ -514,28 +517,28 @@ def outputToExcel(outGdb, iso3, outXlsxDir):
 if __name__ == "__main__":
 
     # Input paths
-    countryListXml = "C:/Google Drive/BirthsandPregnanciesMapping/country_list.xml" # List of countries to process
+    countryListXml = "C:\\Google Drive\\BirthsandPregnanciesMapping\\country_list.xml" # List of countries to process
 
-    urbanAsfrFc = "C:/Google Drive/BirthsandPregnanciesMapping/asfr_2010.gdb/asfrURBAN" # Urban ASFR data
-    ruralAsfrFc = "C:/Google Drive/BirthsandPregnanciesMapping/asfr_2010.gdb/asfrRURAL" # Rural ASFR data
-    dhsRegionsFc = "C:/Google Drive/BirthsandPregnanciesMapping/dhsBoundaries.gdb/subnational_boundaries" # DHS boundaries   
-    urbanAreasShp = "C:/BirthsandPregnancies/GRUMP/af_as_lac_urban_KEN.shp" # Urban area extents
-    ageFc = "C:/Google Drive/BirthsandPregnanciesMapping/popByAgeGroup.gdb/asia_africa" # Asia/Africa Sub-national breakdown of population by age
-    ageXls = "C:/Google Drive/BirthsandPregnanciesMapping/POPULATION_BY_AGE_FEMALE.xls" # UN national breakdown of female population by age
-    popRastDir = "C:\\BirthsandPregnancies\\WorldPop" # Population raster directory
-    grumpPopRast = "C:/BirthsandPregnancies/WorldPop/AfriPop_demo_2015_1km/ap15v4_TOTAL_adj.tif" # GRUMP population raster
-    unBirthsXls = "C:/Google Drive/BirthsandPregnanciesMapping/All-countries-births-by-year_ea.xls" # UN estimates of births
-    birthPregMultiXlsx = "C:/Google Drive/BirthsandPregnanciesMapping/Births-to-pregnancies-multipliers.xlsx" # Births to pregnancy multipliers
-    countryBoundaries = "C:/Google Drive/BirthsandPregnanciesMapping/LSIB-WSV/lsib-wsv.gdb/detailed_world_polygons" # Country boundary polygons
-    urbanGrowthFc = "C:/Google Drive/BirthsandPregnanciesMapping/Growth Rates/GrowthRates.gdb/Urban" # Urban growth rates
-    ruralGrowthFc = "C:/Google Drive/BirthsandPregnanciesMapping/Growth Rates/GrowthRates.gdb/Rural" # Rural growth rates
-    adminBoundaryFc = "C:/Google Drive/BirthsandPregnanciesMapping/adminBoundaries/adminBoundaries.gdb/g2014_2010_2_EA" # Admin level 2 boundaries
-    growthRatesXls = "C:/Google Drive/BirthsandPregnanciesMapping/WPP2012_POP_F02_POPULATION_GROWTH_RATE.XLS" # UN National Growth Rates
+    urbanAsfrFc = "C:\\Google Drive\\BirthsandPregnanciesMapping\\asfr_1990.gdb\\asfrURBAN" # Urban ASFR data
+    ruralAsfrFc = "C:\\Google Drive\\BirthsandPregnanciesMapping\\asfr_1990.gdb\\asfrRURAL" # Rural ASFR data
+    dhsRegionsFc = "C:\\Google Drive\\BirthsandPregnanciesMapping\\dhsBoundaries\\1990\\dhsBoundaries.gdb\\subnational_boundaries" # DHS boundaries   
+    urbanAreasShp = "C:\\BirthsandPregnancies\\GRUMP\\af_as_lac_urban_EA.shp" # Urban area extents
+    ageFc = "C:\\Google Drive\\BirthsandPregnanciesMapping\\Africa_SubNational_ageStructures\\iPums\\EA.shp" # Asia\Africa Sub-national breakdown of population by age
+    ageXls = "C:\\Google Drive\\BirthsandPregnanciesMapping\\POPULATION_BY_AGE_FEMALE_EA.xls" # UN national breakdown of female population by age
+    popRastDir = "C:\\BirthsandPregnancies\\WorldPop1990" # Population raster directory
+    grumpPopRast = "C:\\BirthsandPregnancies\\GRUMP\\grump_pop_1990.tif" # GRUMP 1990 population raster
+    unBirthsXls = "C:\\Google Drive\\BirthsandPregnanciesMapping\\births-by-year_1990_ea.xls" # UN estimates of births
+    birthPregMultiXlsx = "C:\\Google Drive\\BirthsandPregnanciesMapping\\Births-to-pregnancies-multipliers.xlsx" # Births to pregnancy multipliers
+    countryBoundaries = "C:\\Google Drive\\BirthsandPregnanciesMapping\\LSIB-WSV\\lsib-wsv.gdb\\detailed_world_polygons" # Country boundary polygons
+    #urbanGrowthFc = "C:\\Google Drive\\BirthsandPregnanciesMapping\\Growth Rates\\GrowthRates.gdb\\Urban" # Urban growth rates
+    #ruralGrowthFc = "C:\\Google Drive\\BirthsandPregnanciesMapping\\Growth Rates\\GrowthRates.gdb\\Rural" # Rural growth rates
+    adminBoundaryFc = "C:\\Google Drive\\BirthsandPregnanciesMapping\\adminBoundaries\\adminBoundaries.gdb\\g2014_2010_2_EA" # Admin level 2 boundaries
+    #growthRatesXls = "C:\\Google Drive\\BirthsandPregnanciesMapping\\WPP2012_POP_F02_POPULATION_GROWTH_RATE.XLS" # UN National Growth Rates
     
 # Output paths
-    outDir = "C:/BirthsandPregnancies/results/raster" # Raster output directory
-    outGDB = "C:/Google Drive/BirthsandPregnanciesMapping/results/test/result.gdb" # Vector output geodatabase
-    outXlsxDir = "C:/BirthsandPregnancies/results/excel" # Excel output directory
+    outDir = "C:\\BirthsandPregnancies\\results\\raster" # Raster output directory
+    outGDB = "C:\\Google Drive\\BirthsandPregnanciesMapping\\results\\test\\result.gdb" # Vector output geodatabase
+    outXlsxDir = "C:\\BirthsandPregnancies\\results\\excel" # Excel output directory
 
     # Set up logging
     logging.basicConfig(format="%(asctime)s|%(levelname)s|%(message)s", level=logging.INFO)
@@ -564,26 +567,22 @@ if __name__ == "__main__":
             
         # Calculate estimated number of births
         logging.info("Calculating estimated number of births")
-        
         unajustedBirthsEstimates(ageFc, iso3, ageXls, isoNum, popRastPath, asfrPresent, unBirthsXls, outGDB, outDir)
         
         # Adjust births raster to match UN estimates
-        logging.info("Adjusting births raster to match UN estimates")
-        
-        adjustedBirthsEstimates(unBirthsXls, iso3, 2010, outDir)
+        logging.info("Adjusting births raster to match UN estimates")        
+        adjustedBirthsEstimates(unBirthsXls, iso3, 1990, outDir)
 
         # Join growth rates to country boundaries
-        logging.info("Joining growth rates to country boundaries")
-        growthRatesJoin(urbanGrowthFc, ruralGrowthFc, countryBoundaries, urbanAreasShp, iso3, outGDB)
+        # logging.info("Joining growth rates to country boundaries")
+        # growthRatesJoin(urbanGrowthFc, ruralGrowthFc, countryBoundaries, urbanAreasShp, iso3, outGDB)
         
         # Estimate future births
-        logging.info("Estimating future births")
-
-        futureBirthsEstimates(growthRatesXls, iso3, isoNum, outGDB, outDir)
+        # logging.info("Estimating future births")
+        # futureBirthsEstimates(growthRatesXls, iso3, isoNum, outGDB, outDir)
 
         # Estimate pregnancies
         logging.info("Estimating pregnancies")
-
         pregnanciesEstimates(birthPregMultiXlsx, iso3, outDir)
 
         # Zonal statistics by admin region
